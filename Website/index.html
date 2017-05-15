@@ -1,0 +1,313 @@
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="A personal assistant that keeps track of everything from diet, to exercise, to finances.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>3D Model Validation</title>
+
+	<!-- Add to homescreen for Chrome on Android -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="icon" sizes="192x192" href="images/android-desktop.png">
+
+    <!-- Add to homescreen for Safari on iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Material Design Lite">
+    <link rel="apple-touch-icon-precomposed" href="images/ios-desktop.png">
+
+    <!-- Tile icon for Win8 (144x144 + tile color) -->
+    <meta name="msapplication-TileImage" content="images/touch/ms-touch-icon-144x144-precomposed.png">
+    <meta name="msapplication-TileColor" content="#3372DF">
+
+    <link rel="shortcut icon" href="images/favicon.png">
+
+
+	<script src="https://code.getmdl.io/1.2.1/material.min.js"></script>
+    <link rel="stylesheet" href="https://code.getmdl.io/1.2.1/material.indigo-pink.min.css">
+    <!-- Material Design icon font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+	<link rel="stylesheet" href="styles.css">
+	<script type="text/javascript" src="./sha1.js" ></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+</head>
+
+<body>
+    <!-- Uses a transparent header that draws on top of the layout's background -->
+    <div class="mdl-layout mdl-js-layout">
+      <!--<header class="mdl-layout__header mdl-layout__header-transparent">-->
+      	<header class="demo-header mdl-layout__header mdl-color--grey-600 mdl-color-text--grey-100">
+        <div class="mdl-layout__header-row">
+          <!-- Title -->
+          <span class="mdl-layout-title">3D Model Validation Overview</span>
+          <!-- Add spacer, to align navigation to the right -->
+          <div class="mdl-layout-spacer"></div>
+          <!-- Navigation -->
+          <nav class="mdl-navigation">
+
+          </nav>
+        </div>
+      </header>
+
+      <main class="mdl-layout__content">
+
+	    <!-- The rest of the body goes here -->
+	    <!-- Colored FAB button -->
+
+	    <h5> Generating Signature: </h5>
+
+	    <table>
+	    	<tr>
+	    		<td align="right">ORCID ID: </td>
+	    		<td><input type="text" id="orcid-text" value="orcid.org/"></td>
+	    	</tr>
+	    	<tr>
+	    		<td>DOI: </td>
+	    		<td><input type="text" id="doi-text" value=""></td>
+	    	</tr>
+	    	<tr>
+	    		<td>Paradata: </td>
+	    		<td><input type="text" id="para-text" value=""></td>
+	    	</tr>
+	    	<tr>
+	    		<td>File: </td>
+	    		<td><input type="file" id="files" name="file" /></td>
+	    	</tr>
+	    </table>
+
+		<span class="readBytesButtons">
+		  <button>Generate Signature</button>
+		</span>
+		<div id="byte_range"></div>
+		<div id="byte_content"></div>
+		<script>
+		  function readBlob(opt_startByte, opt_stopByte) {
+
+		    var files = document.getElementById('files').files;
+		    if (!files.length) {
+		      alert('Please select a file!');
+		      return;
+		    }
+
+		    var file = files[0];
+		    var start = parseInt(opt_startByte) || 0;
+		    var stop = parseInt(opt_stopByte) || file.size - 1;
+
+		    var reader = new FileReader();
+
+		    // If we use onloadend, we need to check the readyState.
+		    reader.onloadend = function(evt) {
+		      if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+
+		        contents = evt.target.result;
+		        data = JSON.parse(contents);
+		        
+		        orcidvalue = document.getElementById('orcid-text').value;
+		        doivalue = document.getElementById('doi-text').value;
+		        paravalue = document.getElementById('para-text').value;
+
+		        geohashvalue = pointsHashEntry(data, orcidvalue, doivalue);
+		        hashvalue = completeHash(data, orcidvalue, doivalue, geohashvalue);
+		        document.getElementById('byte_content').textContent = "Signature: " + hashvalue;
+
+		        $.ajax ({
+			        url: "sql_interface.php",
+			        data: { orcid: orcidvalue, doi: doivalue, paradata: paravalue, hash: hashvalue, geohash: geohashvalue}, //optional
+			        success: function( result ) {
+			            console.log( result );
+			            //console.log();
+			            //do something after you receive the result
+			        }
+			    });
+		      }
+		    };
+
+		    var blob = file.slice(start, stop + 1);
+		    reader.readAsBinaryString(blob);
+
+		  }
+		  
+		  document.querySelector('.readBytesButtons').addEventListener('click', function(evt) {
+		    if (evt.target.tagName.toLowerCase() == 'button') {
+		      var startByte = evt.target.getAttribute('data-startbyte');
+		      var endByte = evt.target.getAttribute('data-endbyte');
+		      readBlob(startByte, endByte);
+		    }
+		  }, false);
+		</script>
+
+		<hr>
+
+		<h5> Query Model in Database: </h5>
+
+		<table>
+	    	<tr>
+	    		<td>File: </td>
+	    		<td><input type="file" id="files3" name="file" /></td>
+	    	</tr>
+	    </table>
+
+		<span class="readBytesButtonz">
+		  <button>Search</button>
+		</span>
+		
+		<div id="search_result"></div>
+
+		<script>
+		  function readBlob3(opt_startByte, opt_stopByte) {
+
+		    var files = document.getElementById('files3').files;
+		    if (!files.length) {
+		      alert('Please select a file!');
+		      return;
+		    }
+
+		    var file = files[0];
+		    var start = parseInt(opt_startByte) || 0;
+		    var stop = parseInt(opt_stopByte) || file.size - 1;
+
+		    var reader = new FileReader();
+
+		    // If we use onloadend, we need to check the readyState.
+		    reader.onloadend = function(evt) {
+		      if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+
+		        contents = evt.target.result;
+		        data = JSON.parse(contents);
+				
+				doivalue = "";
+				orcidvalue = "";
+				paravalue = "";
+				hashvalue = "";
+				if( data[15].length < 7 ){
+					console.log("No attributes found!");
+				}
+				else {	
+					// doi
+					doivalue = data[15][7][0][1][5][0];
+					// orcid
+					orcidvalue = data[15][7][1][1][5][0];
+		        }
+
+		        geohashvalue = pointsHashEntry(data, orcidvalue, doivalue);
+		        console.log(geohashvalue);
+
+		        $.ajax ({
+			        url: "load_signatures.php",
+			        data: { orcid: orcidvalue, doi: doivalue, geohash: geohashvalue}, //optional
+			        success: function( result ) {
+			            console.log( result );
+			            document.getElementById('search_result').textContent = result;
+			            //do something after you receive the result
+			        }
+			    });
+		      }
+		    };
+
+		    var blob = file.slice(start, stop + 1);
+		    reader.readAsBinaryString(blob);
+
+		  }
+		  
+		  document.querySelector('.readBytesButtonz').addEventListener('click', function(evt) {
+		    if (evt.target.tagName.toLowerCase() == 'button') {
+		      var startByte = evt.target.getAttribute('data-startbyte');
+		      var endByte = evt.target.getAttribute('data-endbyte');
+		      readBlob3(startByte, endByte);
+		    }
+		  }, false);
+		</script>
+
+		<hr>
+
+		<h5> Reading Model Data: </h5>
+
+		<table>
+	    	<tr>
+	    		<td align="right">ORCID ID: </td>
+	    		<td id="ret_orcid"></td>
+	    	</tr>
+	    	<tr>
+	    		<td>DOI: </td>
+	    		<td id="ret_doi"></td>
+	    	</tr>
+	    	<tr>
+	    		<td>Paradata: </td>
+	    		<td id="ret_para"></td>
+	    	</tr>
+	    	<tr>
+	    		<td>File: </td>
+	    		<td id="ret_signature"></td>
+	    	</tr>
+	    </table>
+
+		<table>
+	    	<tr>
+	    		<td>File: </td>
+	    		<td><input type="file" id="files2" name="file" /></td>
+	    	</tr>
+	    </table>
+
+		<span class="readBytesButton">
+		  <button>Access Data</button>
+		</span>
+
+		<script>
+		  function readBlob2(opt_startByte, opt_stopByte) {
+
+		    var files = document.getElementById('files2').files;
+		    if (!files.length) {
+		      alert('Please select a file!');
+		      return;
+		    }
+
+		    var file = files[0];
+		    var start = parseInt(opt_startByte) || 0;
+		    var stop = parseInt(opt_stopByte) || file.size - 1;
+
+		    var reader = new FileReader();
+
+		    // If we use onloadend, we need to check the readyState.
+		    reader.onloadend = function(evt) {
+		      if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+
+		        contents = evt.target.result;
+		        data = JSON.parse(contents);
+		        console.log("printing");
+		        if( data[15].length < 7 ){
+					console.log("No attributes found!");
+				}	
+				else{
+					document.getElementById('ret_doi').textContent = 
+						data[15][7][0][1][5][0];
+
+					document.getElementById('ret_orcid').textContent = 
+						data[15][7][1][1][5][0]+ "\n"
+
+					document.getElementById('ret_para').textContent = 
+						data[15][7][2][1][5][0]+ "\n"
+
+					document.getElementById('ret_signature').textContent = 
+						data[15][7][3][1][5][0] ;
+				}	
+		      }
+		    };
+
+		    var blob = file.slice(start, stop + 1);
+		    reader.readAsBinaryString(blob);
+		  }
+		  
+		  document.querySelector('.readBytesButton').addEventListener('click', function(evt) {
+		    if (evt.target.tagName.toLowerCase() == 'button') {
+		      var startByte = evt.target.getAttribute('data-startbyte');
+		      var endByte = evt.target.getAttribute('data-endbyte');
+		      readBlob2(startByte, endByte);
+		    }
+		  }, false);
+		</script>
+
+  </body>
+
+</html>
